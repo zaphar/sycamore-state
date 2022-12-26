@@ -26,8 +26,8 @@ pub struct FakeState {
 
 pub struct StateMachine();
 
-impl Dispatcher<Msg, FakeState> for StateMachine {
-    fn apply(&self, msg: Msg, original: &ReadSignal<FakeState>) -> FakeState {
+impl MessageMapper<Msg, FakeState> for StateMachine {
+    fn map(&self, msg: Msg, original: &ReadSignal<FakeState>) -> FakeState {
         match msg {
             Msg::UpdateOne(val) => {
                 let mut new_state = original.get().as_ref().clone();
@@ -60,23 +60,23 @@ fn test_state_effect_flow() {
             value_two: 0,
         };
 
-        let reducer = Reducer::new(cx, state, StateMachine());
+        let handler = Handler::new(cx, state, StateMachine());
 
         create_child_scope(cx, |cx| {
-            let form_val = create_signal(cx, reducer.signal().get_untracked().value_one.clone());
+            let form_val = create_signal(cx, handler.read_signal().get_untracked().value_one.clone());
 
-            reducer.bind(cx, || Msg::UpdateOne((*form_val.get()).clone()));
+            handler.bind_event(cx, || Msg::UpdateOne((*form_val.get()).clone()));
 
             form_val.set("bar".to_owned());
 
-            assert_eq!(reducer.signal().get_untracked().value_one, "bar".to_owned());
+            assert_eq!(handler.read_signal().get_untracked().value_one, "bar".to_owned());
 
             create_child_scope(cx, |cx| {
                 let form_val = create_signal(cx, 0);
 
-                reducer.bind(cx, || Msg::UpdateTwo(*form_val.get()));
+                handler.bind_event(cx, || Msg::UpdateTwo(*form_val.get()));
                 form_val.set(1);
-                assert_eq!(reducer.signal().get_untracked().value_two, 1);
+                assert_eq!(handler.read_signal().get_untracked().value_two, 1);
             });
         });
     };

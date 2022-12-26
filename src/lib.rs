@@ -15,22 +15,22 @@ use std::marker::PhantomData;
 
 use sycamore::prelude::*;
 
-pub trait Dispatcher<Msg, Out> {
-    fn apply(&self, msg: Msg, original: &ReadSignal<Out>) -> Out;
+pub trait MessageMapper<Msg, Out> {
+    fn map(&self, msg: Msg, original: &ReadSignal<Out>) -> Out;
 }
 
-pub struct Reducer<'ctx, D, T, Msg>
+pub struct Handler<'ctx, D, T, Msg>
 where
-    D: Dispatcher<Msg, T>,
+    D: MessageMapper<Msg, T>,
 {
     signal: &'ctx Signal<T>,
     dispatcher: &'ctx D,
     _phantom: PhantomData<Msg>,
 }
 
-impl<'ctx, D, T, Msg> Reducer<'ctx, D, T, Msg>
+impl<'ctx, D, T, Msg> Handler<'ctx, D, T, Msg>
 where
-    D: Dispatcher<Msg, T>,
+    D: MessageMapper<Msg, T>,
 {
     pub fn new(cx: Scope<'ctx>, initial: T, dispatcher: D) -> &'ctx Self {
         let signal = create_signal(cx, initial);
@@ -45,19 +45,19 @@ where
         )
     }
 
-    pub fn dispatch(&self, msg: Msg) {
-        self.signal.set(self.dispatcher.apply(msg, self.signal))
+    fn dispatch(&self, msg: Msg) {
+        self.signal.set(self.dispatcher.map(msg, self.signal))
     }
 
-    pub fn signal(&'ctx self) -> &'ctx ReadSignal<T> {
+    pub fn read_signal(&'ctx self) -> &'ctx ReadSignal<T> {
         self.signal
     }
 
-    pub fn bind<F>(&'ctx self, cx: Scope<'ctx>, f: F)
+    pub fn bind_event<F>(&'ctx self, cx: Scope<'ctx>, message_fn: F)
     where
         F: Fn() -> Msg + 'ctx,
     {
-        create_effect(cx, move || self.dispatch(f()));
+        create_effect(cx, move || self.dispatch(message_fn()));
     }
 }
 
