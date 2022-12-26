@@ -63,6 +63,18 @@ where
     {
         create_effect(cx, move || self.dispatch(message_fn(trigger.get())));
     }
+
+    pub fn get_selector<F, Val>(
+        &'ctx self,
+        cx: Scope<'ctx>,
+        selector_factory: F,
+    ) -> &'ctx ReadSignal<Val>
+    where
+        F: Fn(&'ctx ReadSignal<T>) -> Val + 'ctx,
+        Val: PartialEq,
+    {
+        create_selector(cx, move || selector_factory(self.signal))
+    }
 }
 
 #[cfg(test)]
