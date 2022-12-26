@@ -24,6 +24,19 @@ pub struct FakeState {
     value_two: i32,
 }
 
+pub enum MultiMsg {
+    Foo(Msg),
+    Bar(Msg),
+}
+
+pub struct MultiState<'ctx, D>
+where
+    D: MessageMapper<Msg, FakeState>,
+{
+    foo: &'ctx Handler<'ctx, D, FakeState, Msg>,
+    bar: &'ctx Handler<'ctx, D, FakeState, Msg>,
+}
+
 pub struct StateMachine();
 
 impl MessageMapper<Msg, FakeState> for StateMachine {

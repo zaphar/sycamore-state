@@ -54,7 +54,8 @@ where
         )
     }
 
-    fn dispatch(&self, msg: Msg) {
+    /// Directly handle a state message without requiring a binding.
+    pub fn dispatch(&self, msg: Msg) {
         self.signal.set(self.dispatcher.map(msg, self.signal))
     }
 
