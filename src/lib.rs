@@ -52,6 +52,13 @@ where
     pub fn signal(&'ctx self) -> &'ctx ReadSignal<T> {
         self.signal
     }
+
+    pub fn bind<F>(&'ctx self, cx: Scope<'ctx>, f: F)
+    where
+        F: Fn() -> Msg + 'ctx,
+    {
+        create_effect(cx, move || self.dispatch(f()));
+    }
 }
 
 #[cfg(test)]

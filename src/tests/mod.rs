@@ -65,10 +65,7 @@ fn test_state_effect_flow() {
         create_child_scope(cx, |cx| {
             let form_val = create_signal(cx, reducer.signal().get_untracked().value_one.clone());
 
-            create_effect(cx, move || {
-                let new_val = form_val.get();
-                reducer.dispatch(Msg::UpdateOne((*new_val).clone()))
-            });
+            reducer.bind(cx, || Msg::UpdateOne((*form_val.get()).clone()));
 
             form_val.set("bar".to_owned());
 
@@ -77,11 +74,7 @@ fn test_state_effect_flow() {
             create_child_scope(cx, |cx| {
                 let form_val = create_signal(cx, 0);
 
-                create_effect(cx, move || {
-                    let new_val = form_val.get();
-                    reducer.dispatch(Msg::UpdateTwo(*new_val))
-                });
-
+                reducer.bind(cx, || Msg::UpdateTwo(*form_val.get()));
                 form_val.set(1);
                 assert_eq!(reducer.signal().get_untracked().value_two, 1);
             });
