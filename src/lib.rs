@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-use std::marker::PhantomData;
+use std::{marker::PhantomData, rc::Rc};
 
 use sycamore::prelude::*;
 
@@ -53,11 +53,15 @@ where
         self.signal
     }
 
-    pub fn bind_event<F>(&'ctx self, cx: Scope<'ctx>, message_fn: F)
-    where
-        F: Fn() -> Msg + 'ctx,
+    pub fn bind_trigger<F, Val>(
+        &'ctx self,
+        cx: Scope<'ctx>,
+        trigger: &'ctx ReadSignal<Val>,
+        message_fn: F,
+    ) where
+        F: Fn(Rc<Val>) -> Msg + 'ctx,
     {
-        create_effect(cx, move || self.dispatch(message_fn()));
+        create_effect(cx, move || self.dispatch(message_fn(trigger.get())));
     }
 }
 
