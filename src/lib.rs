@@ -18,8 +18,8 @@ use sycamore::prelude::*;
 /// Trait that maps a message and an original state value to a new value.
 /// Implementors of this trait can implement all of their state management
 /// logic in one place.
-pub trait MessageMapper<Msg, Out> {
-    fn map(&self, msg: Msg, original: &ReadSignal<Out>) -> Out;
+pub trait MessageMapper<Msg, Val> {
+    fn map<'ctx>(&self, cx: Scope<'ctx>, msg: Msg, original: &'ctx Signal<Val>);
 }
 
 /// Provides the necessary wiring for a centralized state handling
@@ -55,8 +55,8 @@ where
     }
 
     /// Directly handle a state message without requiring a binding.
-    pub fn dispatch(&self, msg: Msg) {
-        self.signal.set(self.dispatcher.map(msg, self.signal))
+    pub fn dispatch(&'ctx self, cx: Scope<'ctx>, msg: Msg) {
+        self.dispatcher.map(cx, msg, self.signal)
     }
 
     /// Provides a ReadSignal handle for the contained Signal implementation.
@@ -74,7 +74,7 @@ where
     ) where
         F: Fn(Rc<Val>) -> Msg + 'ctx,
     {
-        create_effect(cx, move || self.dispatch(message_fn(trigger.get())));
+        create_effect(cx, move || self.dispatch(cx, message_fn(trigger.get())));
     }
 
     /// Helper method to get a memoized value derived from the contained
@@ -90,6 +90,14 @@ where
         Val: PartialEq,
     {
         create_selector(cx, move || selector_factory(self.signal))
+    }
+
+    // Helper method to get a non reactive value from the state.
+    pub fn get_value<F, Val>(&'ctx self, getter_factory: F) -> Val
+    where
+        F: Fn(&'ctx ReadSignal<T>) -> Val + 'ctx,
+    {
+        getter_factory(self.signal)
     }
 }
 

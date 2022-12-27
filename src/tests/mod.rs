@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use super::*;
+use wasm_bindgen_test::wasm_bindgen_test;
+
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
 pub enum Msg {
     UpdateOne(String),
@@ -40,8 +43,8 @@ where
 pub struct StateMachine();
 
 impl MessageMapper<Msg, FakeState> for StateMachine {
-    fn map(&self, msg: Msg, original: &ReadSignal<FakeState>) -> FakeState {
-        match msg {
+    fn map(&self, _cx: Scope, msg: Msg, original: &Signal<FakeState>) {
+        let new_state = match msg {
             Msg::UpdateOne(val) => {
                 let mut new_state = original.get().as_ref().clone();
                 new_state.value_one = val;
@@ -52,7 +55,8 @@ impl MessageMapper<Msg, FakeState> for StateMachine {
                 new_state.value_two = val;
                 new_state
             }
-        }
+        };
+        original.set(new_state);
     }
 }
 
@@ -65,7 +69,7 @@ macro_rules! with_scope {
     }};
 }
 
-#[test]
+#[wasm_bindgen_test]
 fn test_state_effect_flow() {
     with_scope! {cx,
         let state = FakeState {
@@ -90,6 +94,41 @@ fn test_state_effect_flow() {
                 handler.bind_trigger(cx, form_val, |val| Msg::UpdateTwo(*val));
                 form_val.set(1);
                 assert_eq!(handler.read_signal().get_untracked().value_two, 1);
+            });
+        });
+    };
+}
+
+#[cfg(feature = "async")]
+#[wasm_bindgen_test]
+fn test_state_effect_flow_async() {
+    use sycamore::futures::spawn_local_scoped;
+    with_scope! {cx,
+        let state = FakeState {
+            value_one: "foo".to_owned(),
+            value_two: 0,
+        };
+
+        let handler = Handler::new(cx, state, StateMachine());
+
+        create_child_scope(cx, |cx| {
+            let form_val = create_signal(cx, handler.read_signal().get_untracked().value_one.clone());
+
+            handler.bind_trigger(cx, form_val, |val| Msg::UpdateOne((*val).clone()));
+
+            form_val.set("bar".to_owned());
+
+            assert_eq!(handler.read_signal().get_untracked().value_one, "bar".to_owned());
+
+            create_child_scope(cx, |cx| {
+                let form_val = create_signal(cx, 0);
+
+                handler.bind_trigger(cx, form_val, |val| Msg::UpdateTwo(*val));
+
+                spawn_local_scoped(cx, async {
+                    form_val.set(1);
+                    assert_eq!(handler.read_signal().get_untracked().value_two, 1);
+                });
             });
         });
     };
