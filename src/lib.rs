@@ -65,7 +65,9 @@ where
     }
 
     /// Binds a triggering signal and associated message mapping function as
-    /// a state update for this Handler instance.
+    /// a state update for this Handler instance. This uses [`create_effect`]
+    /// so be aware that it will fire at least once when you first call it. It
+    /// is really easy to introduce an infinite signal update loop.
     pub fn bind_trigger<F, Val>(
         &'ctx self,
         cx: Scope<'ctx>,
