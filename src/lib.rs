@@ -59,6 +59,15 @@ where
         self.dispatcher.map(cx, msg, self.signal)
     }
 
+    /// Directly handle a state message and then run a Fn.
+    pub fn dispatch_and<F>(&'ctx self, cx: Scope<'ctx>, msg: Msg, f: F)
+    where
+        F: FnOnce(),
+    {
+        self.dispatch(cx, msg);
+        f();
+    }
+
     /// Provides a ReadSignal handle for the contained Signal implementation.
     pub fn read_signal(&'ctx self) -> &'ctx ReadSignal<T> {
         self.signal
